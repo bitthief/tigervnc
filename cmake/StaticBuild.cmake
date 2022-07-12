@@ -22,6 +22,10 @@ if(BUILD_STATIC)
   set(ZLIB_LIBRARIES "-Wl,-Bstatic -lz -Wl,-Bdynamic")
   set(PIXMAN_LIBRARIES "-Wl,-Bstatic -lpixman-1 -Wl,-Bdynamic")
 
+  set(ZSTD_LIBRARIES "-Wl,-Bstatic -lzstd -Wl,-Bdynamic")
+  set(BROTLI_ENC_LIBRARIES "-Wl,-Bstatic -lbrotlicommon -lbrotlienc -Wl,-Bdynamic")
+  set(BROTLI_DEC_LIBRARIES "-Wl,-Bstatic -lbrotlicommon -lbrotlidec -Wl,-Bdynamic")
+  
   # gettext is included in libc on many unix systems
   if(NOT LIBC_HAS_DGETTEXT)
     FIND_LIBRARY(UNISTRING_LIBRARY NAMES unistring libunistring
@@ -41,10 +45,12 @@ if(BUILD_STATIC)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -liconv")
     endif()
 
-    set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bdynamic")
+    #set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bdynamic")
 
     # FIXME: MSYS2 doesn't include a static version of this library, so
     #        we'll have to link it dynamically for now
+    set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bstatic")
+
     if(UNISTRING_LIBRARY)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -lunistring")
     endif()
@@ -52,6 +58,8 @@ if(BUILD_STATIC)
     if(APPLE)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -framework Carbon")
     endif()
+
+    set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bdynamic")
   endif()
 
   if(GNUTLS_FOUND)
@@ -83,8 +91,8 @@ if(BUILD_STATIC)
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -Wl,-Bdynamic")
 
     if (WIN32)
-      FIND_LIBRARY(P11KIT_LIBRARY NAMES p11-kit libp11-kit
-        HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+      #FIND_LIBRARY(P11KIT_LIBRARY NAMES p11-kit libp11-kit
+      #  HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
       FIND_LIBRARY(UNISTRING_LIBRARY NAMES unistring libunistring
         HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
 
@@ -93,13 +101,10 @@ if(BUILD_STATIC)
       # And sockets
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lws2_32")
 
-      # p11-kit only available as dynamic library for MSYS2 on Windows and dynamic linking of unistring is required
-      if(P11KIT_LIBRARY)
-        set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lp11-kit")
-      endif()
-      if(UNISTRING_LIBRARY)
-        set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lunistring")
-      endif()
+      # p11-kit only available as dynamic library for MSYS2 on Windows
+      #if(P11KIT_LIBRARY)
+      #  set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lp11-kit")
+      #endif()
     endif()
 
     if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
@@ -113,6 +118,10 @@ if(BUILD_STATIC)
     # included and in the proper order
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${ZLIB_LIBRARIES}")
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${GETTEXT_LIBRARIES}")
+    # GnuTLS uses ZSTD and Brotli
+    set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${ZSTD_LIBRARIES}")
+    set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${BROTLI_ENC_LIBRARIES}")
+    set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${BROTLI_DEC_LIBRARIES}")
 
     # The last variables might introduce whitespace, which CMake
     # throws a hissy fit about
@@ -191,10 +200,10 @@ if(BUILD_STATIC_GCC)
     set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -luser32 -lkernel32 -ladvapi32 -lshell32")
     # mingw has some fun circular dependencies that requires us to link
     # these things again
-    set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -lmingw32 -lgcc_eh -lgcc -lmoldname -lmingwex -lmsvcrt")
+    set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -lmingw32 -lgcc -lmoldname -lmingwex -lmsvcrt")
   else()
     set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -lm -lgcc -lgcc_eh -lc")
   endif()
   set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} ${STATIC_BASE_LIBRARIES}")
-  set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -Wl,-Bstatic -lstdc++ -Wl,-Bdynamic ${STATIC_BASE_LIBRARIES}")
+  set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -Wl,-Bstatic -lpthread -lstdc++ -Wl,-Bdynamic ${STATIC_BASE_LIBRARIES}")
 endif()
