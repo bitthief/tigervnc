@@ -28,6 +28,11 @@
 #define SHUT_RD SD_RECEIVE
 #define SHUT_WR SD_SEND
 #define SHUT_RDWR SD_BOTH
+
+#ifndef AF_HYPERV
+#define AF_HYPERV 34
+#endif
+
 #else
 #define errorNumber errno
 #define closesocket close
@@ -48,12 +53,18 @@ static bool socketsInitialised = false;
 void network::initSockets() {
   if (socketsInitialised)
     return;
+
 #ifdef WIN32
-  WORD requiredVersion = MAKEWORD(2,0);
+  WORD requiredVersion = MAKEWORD(2,2);
   WSADATA initResult;
-  
-  if (WSAStartup(requiredVersion, &initResult) != 0)
-    throw SocketException("unable to initialise Winsock2", errorNumber);
+  memset(&initResult, 0, sizeof(initResult));
+
+  if (WSAStartup(requiredVersion, &initResult) != 0) {
+    requiredVersion = MAKEWORD(2,0);
+    memset(&initResult, 0, sizeof(initResult));
+    if (WSAStartup(requiredVersion, &initResult) != 0)
+      throw SocketException("unable to initialise Winsock2", errorNumber);
+  }
 #else
   signal(SIGPIPE, SIG_IGN);
 #endif
@@ -64,8 +75,7 @@ bool network::isSocketListening(int sock)
 {
   int listening = 0;
   socklen_t listening_size = sizeof(listening);
-  if (getsockopt(sock, SOL_SOCKET, SO_ACCEPTCONN,
-                 (char *)&listening, &listening_size) < 0)
+  if (getsockopt(sock, SOL_SOCKET, SO_ACCEPTCONN, (char *)&listening, &listening_size) < 0)
     return false;
   return listening != 0;
 }

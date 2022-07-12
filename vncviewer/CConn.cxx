@@ -40,6 +40,7 @@
 #ifndef WIN32
 #include <network/UnixSocket.h>
 #endif
+#include <network/VsockSocket.h>
 
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
@@ -63,19 +64,16 @@ using namespace std;
 static rfb::LogWriter vlog("CConn");
 
 // 8 colours (1 bit per component)
-static const PixelFormat verylowColourPF(8, 3,false, true,
-                                         1, 1, 1, 2, 1, 0);
+static const PixelFormat verylowColourPF(8, 3,false, true, 1, 1, 1, 2, 1, 0);
 // 64 colours (2 bits per component)
-static const PixelFormat lowColourPF(8, 6, false, true,
-                                     3, 3, 3, 4, 2, 0);
+static const PixelFormat lowColourPF(8, 6, false, true, 3, 3, 3, 4, 2, 0);
 // 256 colours (2-3 bits per component)
-static const PixelFormat mediumColourPF(8, 8, false, true,
-                                        7, 7, 3, 5, 2, 0);
+static const PixelFormat mediumColourPF(8, 8, false, true, 7, 7, 3, 5, 2, 0);
 
 // Time new bandwidth estimates are weighted against (in ms)
 static const unsigned bpsEstimateWindow = 1000;
 
-CConn::CConn(const char* vncServerName, network::Socket* socket=NULL)
+CConn::CConn(const char* vncServerName, network::Socket* socket = NULL)
   : serverHost(0), serverPort(0), desktop(NULL),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
@@ -94,32 +92,42 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=NULL)
   if (!noJpeg)
     setQualityLevel(::qualityLevel);
 
-  if(sock == NULL) {
+  if (sock == NULL) {
     try {
 #ifndef WIN32
       if (strchr(vncServerName, '/') != NULL) {
         sock = new network::UnixSocket(vncServerName);
         serverHost = sock->getPeerAddress();
         vlog.info(_("Connected to socket %s"), serverHost);
+        setServerName(serverHost);
       } else
 #endif
-      {
+      if (strchr(vncServerName, '{') != NULL) {
         getHostAndPort(vncServerName, &serverHost, &serverPort);
-
+        sock = new network::VsockSocket(serverHost, serverPort);
+#ifdef WIN32
+        vlog.info(_("Connected to VSOCK GUID %s port %d"), serverHost, serverPort);
+#else
+        vlog.info(_("Connected to VSOCK CID %s port %d"), serverHost, serverPort);
+#endif
+        setServerName("localhost");
+      }
+      else {
+        getHostAndPort(vncServerName, &serverHost, &serverPort);
         sock = new network::TcpSocket(serverHost, serverPort);
         vlog.info(_("Connected to host %s port %d"), serverHost, serverPort);
+        setServerName(serverHost);
       }
-    } catch (rdr::Exception& e) {
+    }
+    catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
-                       vncServerName, e.str());
+      abort_connection(_("Failed to connect to \"%s\":\n\n%s"), vncServerName, e.str());
       return;
     }
   }
 
   Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT, socketEvent, this);
 
-  setServerName(serverHost);
   setStreams(&sock->inStream(), &sock->outStream());
 
   initialiseProtocol();
@@ -155,58 +163,48 @@ const char *CConn::connectionInfo()
 
   infoText[0] = '\0';
 
-  snprintf(scratch, sizeof(scratch),
-           _("Desktop name: %.80s"), server.name());
+  snprintf(scratch, sizeof(scratch), _("Desktop name: %.80s"), server.name());
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Host: %.80s port: %d"), serverHost, serverPort);
+  snprintf(scratch, sizeof(scratch), _("Host: %.80s port: %d"), serverHost, serverPort);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Size: %d x %d"), server.width(), server.height());
+  snprintf(scratch, sizeof(scratch), _("Size: %d x %d"), server.width(), server.height());
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
   // TRANSLATORS: Will be filled in with a string describing the
   // protocol pixel format in a fairly language neutral way
   server.pf().print(pfStr, 100);
-  snprintf(scratch, sizeof(scratch),
-           _("Pixel format: %s"), pfStr);
+  snprintf(scratch, sizeof(scratch), _("Pixel format: %s"), pfStr);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
   serverPF.print(pfStr, 100);
-  snprintf(scratch, sizeof(scratch),
-           _("(server default %s)"), pfStr);
+  snprintf(scratch, sizeof(scratch), _("(server default %s)"), pfStr);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Requested encoding: %s"), encodingName(getPreferredEncoding()));
+  snprintf(scratch, sizeof(scratch), _("Requested encoding: %s"), encodingName(getPreferredEncoding()));
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Last used encoding: %s"), encodingName(lastServerEncoding));
+  snprintf(scratch, sizeof(scratch), _("Last used encoding: %s"), encodingName(lastServerEncoding));
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Line speed estimate: %d kbit/s"), (int)(bpsEstimate/1000));
+  snprintf(scratch, sizeof(scratch), _("Line speed estimate: %d kbit/s"), (int)(bpsEstimate/1000));
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Protocol version: %d.%d"), server.majorVersion, server.minorVersion);
+  snprintf(scratch, sizeof(scratch), _("Protocol version: %d.%d"), server.majorVersion, server.minorVersion);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  snprintf(scratch, sizeof(scratch),
-           _("Security method: %s"), secTypeName(csecurity->getType()));
+  snprintf(scratch, sizeof(scratch), _("Security method: %s"), secTypeName(csecurity->getType()));
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
@@ -303,8 +301,7 @@ void CConn::initDone()
 
   serverPF = server.pf();
 
-  desktop = new DesktopWindow(server.width(), server.height(),
-                              server.name(), serverPF, this);
+  desktop = new DesktopWindow(server.width(), server.height(), server.name(), serverPF, this);
   fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like
@@ -378,16 +375,13 @@ void CConn::framebufferUpdateEnd()
   elapsed += now.tv_usec - updateStartTime.tv_usec;
   if (elapsed == 0)
     elapsed = 1;
-  bps = (unsigned long long)(sock->inStream().pos() -
-                             updateStartPos) * 8 *
-                            1000000 / elapsed;
+  bps = (unsigned long long)(sock->inStream().pos() - updateStartPos) * 8 * 1000000 / elapsed;
   // Allow this update to influence things more the longer it took, to a
   // maximum of 20% of the new value.
   weight = elapsed * 1000 / bpsEstimateWindow;
   if (weight > 200000)
     weight = 200000;
-  bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
-                 (bps * weight)) / 1000000;
+  bpsEstimate = ((bpsEstimate * (1000000 - weight)) + (bps * weight)) / 1000000;
 
   Fl::remove_timeout(handleUpdateTimeout, this);
   desktop->updateWindow();
@@ -510,8 +504,7 @@ void CConn::autoSelectFormatAndEncoding()
       newQualityLevel = 6;
 
     if (newQualityLevel != ::qualityLevel) {
-      vlog.info(_("Throughput %d kbit/s - changing to quality %d"),
-                (int)(bpsEstimate/1000), newQualityLevel);
+      vlog.info(_("Throughput %d kbit/s - changing to quality %d"), (int)(bpsEstimate/1000), newQualityLevel);
       ::qualityLevel.setParam(newQualityLevel);
       setQualityLevel(newQualityLevel);
     }
@@ -532,14 +525,12 @@ void CConn::autoSelectFormatAndEncoding()
   newFullColour = (bpsEstimate > 256000);
   if (newFullColour != fullColour) {
     if (newFullColour)
-      vlog.info(_("Throughput %d kbit/s - full color is now enabled"),
-                (int)(bpsEstimate/1000));
+      vlog.info(_("Throughput %d kbit/s - full color is now enabled"), (int)(bpsEstimate/1000));
     else
-      vlog.info(_("Throughput %d kbit/s - full color is now disabled"),
-                (int)(bpsEstimate/1000));
+      vlog.info(_("Throughput %d kbit/s - full color is now disabled"), (int)(bpsEstimate/1000));
     fullColour.setParam(newFullColour);
     updatePixelFormat();
-  } 
+  }
 }
 
 // requestNewUpdate() requests an update from the server, having set the

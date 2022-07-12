@@ -25,7 +25,7 @@ if(BUILD_STATIC)
   set(ZSTD_LIBRARIES "-Wl,-Bstatic -lzstd -Wl,-Bdynamic")
   set(BROTLI_ENC_LIBRARIES "-Wl,-Bstatic -lbrotlicommon -lbrotlienc -Wl,-Bdynamic")
   set(BROTLI_DEC_LIBRARIES "-Wl,-Bstatic -lbrotlicommon -lbrotlidec -Wl,-Bdynamic")
-  
+
   # gettext is included in libc on many unix systems
   if(NOT LIBC_HAS_DGETTEXT)
     FIND_LIBRARY(UNISTRING_LIBRARY NAMES unistring libunistring
@@ -40,7 +40,7 @@ if(BUILD_STATIC)
     if(INTL_LIBRARY)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -lintl")
     endif()
-    
+
     if(ICONV_LIBRARY)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -liconv")
     endif()
@@ -68,6 +68,7 @@ if(BUILD_STATIC)
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
     FIND_LIBRARY(NETTLE_LIBRARY NAMES nettle libnettle
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+    FIND_LIBRARY(GMP_LIBRARY NAMES gmp libgmp)
     FIND_LIBRARY(TASN1_LIBRARY NAMES tasn1 libtasn1
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
     FIND_LIBRARY(IDN2_LIBRARY NAMES idn2 libidn2

@@ -2,17 +2,17 @@
  * Copyright (C) 2005 Martin Koegler
  * Copyright (C) 2010 TigerVNC Team
  * Copyright (C) 2012-2021 Pierre Ossman for Cendio AB
- * 
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
@@ -34,8 +34,7 @@ using namespace rdr;
 
 static rfb::LogWriter vlog("TLSOutStream");
 
-ssize_t TLSOutStream::push(gnutls_transport_ptr_t str, const void* data,
-				   size_t size)
+ssize_t TLSOutStream::push(gnutls_transport_ptr_t str, const void* data, size_t size)
 {
   TLSOutStream* self= (TLSOutStream*) str;
   OutStream *out = self->out;
@@ -46,12 +45,14 @@ ssize_t TLSOutStream::push(gnutls_transport_ptr_t str, const void* data,
   try {
     out->writeBytes(data, size);
     out->flush();
-  } catch (SystemException &e) {
+  }
+  catch (SystemException &e) {
     vlog.error("Failure sending TLS data: %s", e.str());
     gnutls_transport_set_errno(self->session, e.err);
     self->saved_exception = new SystemException(e);
     return -1;
-  } catch (Exception& e) {
+  }
+  catch (Exception& e) {
     vlog.error("Failure sending TLS data: %s", e.str());
     gnutls_transport_set_errno(self->session, EINVAL);
     self->saved_exception = new Exception(e);
@@ -111,7 +112,7 @@ size_t TLSOutStream::writeTLS(const U8* data, size_t length)
   int n;
 
   n = gnutls_record_send(session, data, length);
-  if (n == GNUTLS_E_INTERRUPTED || n == GNUTLS_E_AGAIN)
+  if (n == GNUTLS_E_INTERRUPTED || n == GNUTLS_E_AGAIN || n == GNUTLS_E_REHANDSHAKE)
     return 0;
 
   if (n == GNUTLS_E_PUSH_ERROR)

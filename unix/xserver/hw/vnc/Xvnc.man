@@ -99,6 +99,11 @@ connections from viewers.
 Specifies the mode of the Unix domain socket.  The default is 0600.
 .
 .TP
+.B \-rfbvsockcid \fIcid\fP
+Specifies the CID of a VSOCK socket on which Xvnc listens for
+connections from viewers.
+.
+.TP
 .B \-rfbauth \fIpasswd-file\fP, \-PasswordFile \fIpasswd-file\fP
 Password file for VNC authentication.  There is no default, you should
 specify the password file explicitly.  Password file should be created with

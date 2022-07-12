@@ -29,7 +29,7 @@
 using namespace rdr;
 
 static const size_t DEFAULT_BUF_SIZE = 16384;
-static const size_t MAX_BUF_SIZE = 32 * 1024 * 1024;
+static const size_t MAX_BUF_SIZE = 16 * 1024 * 1024;
 
 BufferedOutStream::BufferedOutStream(bool emulateCork)
   : bufSize(DEFAULT_BUF_SIZE), offset(0), emulateCork(emulateCork)

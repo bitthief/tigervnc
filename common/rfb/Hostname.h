@@ -1,15 +1,15 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * 
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
@@ -38,7 +38,7 @@ namespace rfb {
     return true;
   }
 
-  static void getHostAndPort(const char* hi, char** host, int* port, int basePort=5900) {
+  static void getHostAndPort(const char* hi, char** host, int* port, int basePort = 5900) {
     const char* hostStart;
     const char* hostEnd;
     const char* portStart;
@@ -60,7 +60,17 @@ namespace rfb {
         throw rdr::Exception("unmatched [ in host");
 
       portStart = hostEnd + 1;
-      if (isAllSpace(portStart))
+      if (isAllSpace(portStart) || *portStart == '\0')
+        portStart = NULL;
+    } else if (hi[0] == '{') {
+      hostStart = &hi[1];
+      hostEnd = strchr(hostStart, '}');
+      if (hostEnd == NULL)
+        throw rdr::Exception("unmatched { in CID");
+      //hostEnd++;
+
+      portStart = hostEnd + 1;
+      if (isAllSpace(portStart) || *portStart == '\0')
         portStart = NULL;
     } else {
       hostStart = &hi[0];
