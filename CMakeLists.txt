@@ -336,7 +336,7 @@ if(BUILD_VIEWER)
   add_subdirectory(media)
 endif()
 
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
 
 if(BUILD_VIEWER)
