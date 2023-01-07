@@ -10,3 +10,7 @@ CMakeCache.txt
 Makefile
 Makefile.in
 config.h
+
+build/**
+
+.vscode
