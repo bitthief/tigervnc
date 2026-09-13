@@ -114,11 +114,20 @@ if(BUILD_STATIC)
       # And sockets
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lws2_32")
 
-      # p11-kit only available as dynamic library for MSYS2 on Windows and dynamic linking of unistring is required
-      if(P11KIT_LIBRARY)
+      # p11-kit is only available as a dynamic library on MSYS2. Newer
+      # MSYS2 builds of GnuTLS (3.8.9-2 and later) build the static
+      # library without p11-kit, so only link it when pkg-config says
+      # the static library still needs it, otherwise the executable
+      # ends up depending on libp11-kit-0.dll for nothing.
+      if(P11KIT_LIBRARY AND ("p11-kit" IN_LIST PC_GNUTLS_STATIC_LIBRARIES))
         set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lp11-kit")
       endif()
-      if(UNISTRING_LIBRARY)
+      # Prefer a static libunistring when one is available
+      FIND_LIBRARY(UNISTRING_STATIC_LIBRARY NAMES libunistring.a
+        HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+      if(UNISTRING_STATIC_LIBRARY)
+        set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -Wl,-Bstatic -lunistring -Wl,-Bdynamic")
+      elseif(UNISTRING_LIBRARY)
         set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lunistring")
       endif()
     endif()
@@ -196,6 +205,12 @@ endif()
 if(BUILD_STATIC_GCC)
   set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} -static-libgcc")
   set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -static-libstdc++ -static-libgcc")
+  if(WIN32)
+    # MinGW's libstdc++ and libgcc use winpthread, which is otherwise
+    # pulled in as libwinpthread-1.dll even with the static runtime
+    set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic")
+    set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic")
+  endif()
   if(ENABLE_ASAN)
     set(CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE} -static-libasan")
     set(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE} -static-libasan")
