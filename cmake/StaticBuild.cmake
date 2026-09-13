@@ -77,6 +77,10 @@ if(BUILD_STATIC)
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
     FIND_LIBRARY(ZSTD_LIBRARY NAMES zstd libzstd
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+    FIND_LIBRARY(BROTLIENC_LIBRARY NAMES brotlienc libbrotlienc
+      HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+    FIND_LIBRARY(BROTLIDEC_LIBRARY NAMES brotlidec libbrotlidec
+      HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
 
     set(GNUTLS_LIBRARIES "-Wl,-Bstatic -lgnutls")
 
@@ -91,6 +95,10 @@ if(BUILD_STATIC)
     endif()
     if(ZSTD_LIBRARY)
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lzstd")
+    endif()
+    # Newer GnuTLS builds (e.g. MSYS2) also use Brotli for compression
+    if(BROTLIENC_LIBRARY AND BROTLIDEC_LIBRARY)
+      set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lbrotlienc -lbrotlidec -lbrotlicommon")
     endif()
 
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -Wl,-Bdynamic")
