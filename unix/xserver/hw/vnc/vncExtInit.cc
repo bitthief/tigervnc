@@ -39,6 +39,9 @@
 
 #include <network/TcpSocket.h>
 #include <network/UnixSocket.h>
+#ifdef HAVE_VSOCK
+#include <network/VsockSocket.h>
+#endif
 
 #include "XserverDesktop.h"
 #include "vncExtInit.h"
@@ -77,6 +80,12 @@ core::StringParameter
 core::IntParameter
   rfbunixmode("rfbunixmode",
               _("UNIX socket access mode"), 0600, 0000, 0777);
+#ifdef HAVE_VSOCK
+core::StringParameter
+  rfbvsockcid("rfbvsockcid",
+              _("VM socket (AF_VSOCK) CID to listen on for RFB "
+                "protocol, e.g. \"any\""), "");
+#endif
 core::StringParameter
   desktopName("desktop",
               _("Name of VNC desktop"), defaultDesktopName());
@@ -224,6 +233,20 @@ void vncExtensionInit(void)
           vlog.info(_("Listening for VNC connections on %s "
                       "(mode %04o)"), path, mode);
         }
+
+#ifdef HAVE_VSOCK
+        if (!inetd && ((const char*)rfbvsockcid)[0] != '\0') {
+          const char* cid = rfbvsockcid;
+          int port = rfbport;
+          if (port <= 0) port = 5900 + atoi(vncGetDisplay());
+          port += 1000 * scr;
+
+          listeners.push_back(new network::VsockListener(cid, port));
+
+          vlog.info(_("Listening for VNC connections on VM socket "
+                      "CID %s, port %d"), cid, port);
+        }
+#endif
 
         if (!inetd && rfbport != -1) {
           std::list<network::SocketListener*> tcp_listeners;

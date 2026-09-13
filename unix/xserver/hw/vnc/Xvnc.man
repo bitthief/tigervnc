@@ -286,6 +286,16 @@ Specifies the path of a Unix domain socket on which Xvnc listens for
 connections from viewers.
 .
 .TP
+.B \-rfbvsockcid \fIcid\fP
+Specifies the context ID (CID) of a VM socket (AF_VSOCK) on which Xvnc
+listens for connections from viewers, in addition to any TCP or Unix
+domain sockets.  The usual value is \fBany\fP, which accepts connections
+on every CID.  VM sockets allow a viewer running on the hypervisor host
+(for example Windows with Hyper\-V) to reach a guest without any network
+configuration.  The port is the same as for TCP (see \fB\-rfbport\fP).
+Xvnc must be built with VM socket support.
+.
+.TP
 .B \-RSAKey \fIpath\fP
 Path to the RSA key for the RSA-AES security types (\fBRA2\fP, \fBRA2ne\fP,
 \fBRA2_256\fP and \fBRA2ne_256\fP) in PEM format.
