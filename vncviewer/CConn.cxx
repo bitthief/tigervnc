@@ -55,6 +55,9 @@
 #ifndef WIN32
 #include <network/UnixSocket.h>
 #endif
+#ifdef HAVE_VSOCK
+#include <network/VsockSocket.h>
+#endif
 
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
@@ -185,6 +188,15 @@ void CConn::connect(const char* vncServerName, network::Socket* socket)
         sock = new network::UnixSocket(vncServerName);
         serverHost = sock->getPeerAddress();
         vlog.info(_("Connected to socket %s"), serverHost.c_str());
+      } else
+#endif
+#ifdef HAVE_VSOCK
+      if (vncServerName[0] == '{') {
+        network::getHostAndPort(vncServerName, &serverHost, &serverPort);
+
+        sock = new network::VsockSocket(serverHost.c_str(), serverPort);
+        vlog.info(_("Connected to VM socket peer %s port %d"),
+                  serverHost.c_str(), serverPort);
       } else
 #endif
       {

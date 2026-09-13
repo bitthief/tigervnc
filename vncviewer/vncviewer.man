@@ -15,7 +15,11 @@ vncviewer \- VNC viewer for X
 .RI [ unix\ socket ]
 .br
 .B vncviewer
-.RI [ options ] 
+.RI [ options ]
+.RI { vm\ id }[:: port ]
+.br
+.B vncviewer
+.RI [ options ]
 .B \-listen
 .RI [ port ]
 .br
@@ -38,6 +42,18 @@ where 'snoopy' is the name of the machine, and '2' is the display number of the
 VNC server on that machine.  Either the machine name or display number can be
 omitted.  So for example ":1" means display number 1 on the same machine, and
 "snoopy" means "snoopy:0" i.e. display 0 on machine "snoopy".
+
+If the viewer was built with VM socket support, a server running inside a
+virtual machine on the same hypervisor can be reached directly, without any
+network configuration, by wrapping the VM's identity in braces, e.g.:
+
+.RS
+vncviewer {12345678\-1234\-1234\-1234\-123456789abc}::5901
+.RE
+
+On a Windows Hyper\-V host the identity is the VM's GUID (or the keyword
+'parent' when running inside a guest).  On Linux it is the AF_VSOCK context
+ID, e.g. '{2}' for the host.  The port defaults to 5900.
 
 As another quick way to start a connection to a VNC server, specify a .tigervnc
 configuration file as an argument to the viewer, e.g.:
