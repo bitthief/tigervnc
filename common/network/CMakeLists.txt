@@ -10,6 +10,10 @@ if(NOT WIN32)
   target_sources(network PRIVATE UnixSocket.cxx)
 endif()
 
+if(HAVE_VSOCK)
+  target_sources(network PRIVATE VsockSocket.cxx)
+endif()
+
 target_include_directories(network PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_link_libraries(network core rdr)
 

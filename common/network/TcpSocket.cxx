@@ -142,6 +142,16 @@ void network::getHostAndPort(const char* hi, std::string* host,
     portStart = hostEnd + 1;
     if (isAllSpace(portStart))
       portStart = nullptr;
+  } else if (hi[0] == '{') {
+    // VM socket peer: {<CID or VM GUID>}[::port]
+    hostStart = &hi[1];
+    hostEnd = strchr(hostStart, '}');
+    if (hostEnd == nullptr)
+      throw std::runtime_error(_("Unmatched { in VM socket address"));
+
+    portStart = hostEnd + 1;
+    if (isAllSpace(portStart))
+      portStart = nullptr;
   } else {
     hostStart = &hi[0];
     hostEnd = strrchr(hostStart, ':');
